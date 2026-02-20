@@ -94,7 +94,7 @@ struct fl2000_drm_if {
 	struct fl2000_intr *intr;
 };
 
-DEFINE_DRM_GEM_DMA_FOPS(fl2000_drm_driver_fops);
+DEFINE_DRM_GEM_FOPS(fl2000_drm_driver_fops);
 
 static void fl2000_drm_release(struct drm_device *drm)
 {
@@ -104,12 +104,11 @@ static void fl2000_drm_release(struct drm_device *drm)
 
 static struct drm_driver fl2000_drm_driver = {
 	.driver_features = DRIVER_MODESET | DRIVER_GEM | DRIVER_ATOMIC,
-	.lastclose = drm_fb_helper_lastclose,
 	.ioctls = NULL,
 	.fops = &fl2000_drm_driver_fops,
 	.release = fl2000_drm_release,
 
-	DRM_GEM_DMA_DRIVER_OPS_VMAP,
+	DRM_GEM_SHMEM_DRIVER_OPS,
 
 	.name = DRM_DRIVER_NAME,
 	.desc = DRM_DRIVER_DESC,
@@ -300,7 +299,8 @@ static void fb2000_dirty(struct drm_framebuffer *fb, struct drm_rect *rect)
 	int idx;
 	struct drm_device *drm = fb->dev;
 	struct fl2000_drm_if *drm_if = drm->dev_private;
-	struct drm_gem_dma_object *dma_obj = drm_fb_dma_get_gem_obj(fb, 0);
+	struct drm_gem_object *gem_obj = drm_gem_fb_get_obj(fb, 0);
+	struct drm_gem_shmem_object *shmem_obj = to_drm_gem_shmem_obj(gem_obj);
 
 	UNUSED(rect);
 
@@ -313,7 +313,7 @@ static void fb2000_dirty(struct drm_framebuffer *fb, struct drm_rect *rect)
 	if (ret)
 		return;
 
-	fl2000_stream_compress(drm_if->stream, dma_obj->vaddr, fb->height, fb->width,
+	fl2000_stream_compress(drm_if->stream, shmem_obj->vaddr, fb->height, fb->width,
 			       fb->pitches[0]);
 
 	drm_gem_fb_end_cpu_access(fb, DMA_FROM_DEVICE);
@@ -524,7 +524,7 @@ int fl2000_drm_bind(struct device *master)
 	fl2000_reset(usb_dev);
 	fl2000_usb_magic(usb_dev);
 
-	drm_fbdev_generic_setup(drm, FL2000_FB_BPP);
+	drm_fbdev_shmem_setup(drm, FL2000_FB_BPP);
 
 	return 0;
 }

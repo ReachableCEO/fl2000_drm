@@ -8,7 +8,6 @@
 
 #define DRM_DRIVER_NAME "fl2000_drm"
 #define DRM_DRIVER_DESC "USB-HDMI"
-#define DRM_DRIVER_DATE "20181001"
 
 #define DRM_DRIVER_MAJOR      0
 #define DRM_DRIVER_MINOR      0
@@ -112,7 +111,6 @@ static struct drm_driver fl2000_drm_driver = {
 
 	.name = DRM_DRIVER_NAME,
 	.desc = DRM_DRIVER_DESC,
-	.date = DRM_DRIVER_DATE,
 	.major = DRM_DRIVER_MAJOR,
 	.minor = DRM_DRIVER_MINOR,
 	.patchlevel = DRM_DRIVER_PATCHLEVEL,
@@ -301,6 +299,7 @@ static void fb2000_dirty(struct drm_framebuffer *fb, struct drm_rect *rect)
 	struct fl2000_drm_if *drm_if = drm->dev_private;
 	struct drm_gem_object *gem_obj = drm_gem_fb_get_obj(fb, 0);
 	struct drm_gem_shmem_object *shmem_obj = to_drm_gem_shmem_obj(gem_obj);
+	struct iosys_map map;
 
 	UNUSED(rect);
 
@@ -309,15 +308,16 @@ static void fb2000_dirty(struct drm_framebuffer *fb, struct drm_rect *rect)
 		return;
 	}
 
-	ret = drm_gem_fb_begin_cpu_access(fb, DMA_FROM_DEVICE);
+	ret = drm_gem_shmem_vmap(shmem_obj, &map);
 	if (ret)
-		return;
+		goto exit;
 
-	fl2000_stream_compress(drm_if->stream, shmem_obj->vaddr, fb->height, fb->width,
+	fl2000_stream_compress(drm_if->stream, map.vaddr, fb->height, fb->width,
 			       fb->pitches[0]);
 
-	drm_gem_fb_end_cpu_access(fb, DMA_FROM_DEVICE);
+	drm_gem_shmem_vunmap(shmem_obj, &map);
 
+exit:
 	drm_dev_exit(idx);
 }
 

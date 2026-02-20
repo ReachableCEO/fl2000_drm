@@ -842,7 +842,7 @@ static void __exit it66121_remove(void)
 
 	component_del(&priv->client->dev, &it66121_component_ops);
 
-	kfree(priv->edid);
+	drm_edid_free(priv->edid);
 
 	drm_bridge_remove(&priv->bridge);
 
